@@ -1,23 +1,23 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { SignupForm } from '@/components/Auth/SignupForm';
-import { GoogleSignInButton } from '@/components/Auth/GoogleSignInButton';
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import { SignupForm } from "@/components/Auth/SignupForm";
+import { GoogleSignInButton } from "@/components/Auth/GoogleSignInButton";
 
 export const Signup: React.FC = () => {
   const navigate = useNavigate();
 
   const handleAuthSuccess = () => {
     // Redirect to dashboard or home page after successful authentication
-    navigate('/');
+    navigate("/");
   };
 
   const handleAuthError = (error: string) => {
-    console.error('Authentication error:', error);
+    console.error("Authentication error:", error);
     // You could show a toast notification here
   };
 
   const handleSwitchToLogin = () => {
-    navigate('/login');
+    navigate("/login");
   };
 
   return (
@@ -42,7 +42,9 @@ export const Signup: React.FC = () => {
             <div className="w-full border-t border-gray-300" />
           </div>
           <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-slate-50 text-gray-500">Or continue with</span>
+            <span className="px-2 bg-slate-50 text-gray-500">
+              Or continue with
+            </span>
           </div>
         </div>
 

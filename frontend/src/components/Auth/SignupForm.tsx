@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
+import type { UserCredential } from 'firebase/auth';
+import type { FirebaseError } from 'firebase/app';
 import { auth } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useToast } from '@/hooks/useToast';
 
 interface SignupFormProps {
   onSuccess?: () => void;
@@ -29,6 +32,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
+  const { toast } = useToast();
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
@@ -66,12 +70,24 @@ export const SignupForm: React.FC<SignupFormProps> = ({
     setErrors({});
 
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential: UserCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      
+      // Log user info to console
+      console.log('Signup successful:', {
+        email: user.email,
+        uid: user.uid,
+        displayName: user.displayName,
+        emailVerified: user.emailVerified
+      });
+      
+      toast.success('Account created successfully!');
       onSuccess?.();
-    } catch (error: any) {
+    } catch (error) {
+      const firebaseError = error as FirebaseError;
       let errorMessage = 'Failed to create account';
       
-      switch (error.code) {
+      switch (firebaseError.code) {
         case 'auth/email-already-in-use':
           errorMessage = 'An account with this email already exists';
           break;
@@ -84,11 +100,15 @@ export const SignupForm: React.FC<SignupFormProps> = ({
         case 'auth/operation-not-allowed':
           errorMessage = 'Email/password accounts are not enabled';
           break;
+        case 'auth/network-request-failed':
+          errorMessage = 'Network error. Please check your connection';
+          break;
         default:
-          errorMessage = error.message || 'Failed to create account';
+          errorMessage = firebaseError.message || 'Failed to create account';
       }
       
       setErrors({ general: errorMessage });
+      toast.error(errorMessage);
       onError?.(errorMessage);
     } finally {
       setIsLoading(false);
@@ -164,7 +184,14 @@ export const SignupForm: React.FC<SignupFormProps> = ({
             className="w-full"
             disabled={isLoading}
           >
-            {isLoading ? 'Creating account...' : 'Create account'}
+            {isLoading ? (
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Creating account...
+              </div>
+            ) : (
+              'Create account'
+            )}
           </Button>
         </form>
 
