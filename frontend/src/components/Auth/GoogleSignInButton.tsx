@@ -1,7 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { signInWithPopup } from 'firebase/auth';
+import type { UserCredential } from 'firebase/auth';
+import type { FirebaseError } from 'firebase/app';
 import { auth, googleProvider } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/useToast';
 
 interface GoogleSignInButtonProps {
   onSuccess?: () => void;
@@ -39,13 +42,55 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
   onError,
   disabled = false,
 }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+
   const handleGoogleSignIn = async () => {
+    setIsLoading(true);
+    
     try {
-      await signInWithPopup(auth, googleProvider);
+      const userCredential: UserCredential = await signInWithPopup(auth, googleProvider);
+      const user = userCredential.user;
+      
+      // Log user info to console
+      console.log('Google sign-in successful:', {
+        email: user.email,
+        uid: user.uid,
+        displayName: user.displayName,
+        emailVerified: user.emailVerified,
+        photoURL: user.photoURL
+      });
+      
+      toast.success('Successfully signed in with Google!');
       onSuccess?.();
-    } catch (error: any) {
-      const errorMessage = error.message || 'Failed to sign in with Google';
+    } catch (error) {
+      const firebaseError = error as FirebaseError;
+      let errorMessage = 'Failed to sign in with Google';
+      
+      switch (firebaseError.code) {
+        case 'auth/popup-closed-by-user':
+          errorMessage = 'Sign-in popup was closed. Please try again.';
+          break;
+        case 'auth/popup-blocked':
+          errorMessage = 'Popup was blocked by your browser. Please allow popups and try again.';
+          break;
+        case 'auth/cancelled-popup-request':
+          errorMessage = 'Sign-in was cancelled. Please try again.';
+          break;
+        case 'auth/network-request-failed':
+          errorMessage = 'Network error. Please check your connection and try again.';
+          break;
+        case 'auth/account-exists-with-different-credential':
+          errorMessage = 'An account already exists with this email using a different sign-in method.';
+          break;
+        default:
+          errorMessage = firebaseError.message || 'Failed to sign in with Google';
+      }
+      
+      toast.error(errorMessage);
       onError?.(errorMessage);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -54,11 +99,20 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
       type="button"
       variant="outline"
       onClick={handleGoogleSignIn}
-      disabled={disabled}
+      disabled={disabled || isLoading}
       className="w-full"
     >
-      <GoogleIcon />
-      Continue with Google
+      {isLoading ? (
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 border-2 border-gray-600 border-t-transparent rounded-full animate-spin" />
+          Signing in...
+        </div>
+      ) : (
+        <>
+          <GoogleIcon />
+          Continue with Google
+        </>
+      )}
     </Button>
   );
 };

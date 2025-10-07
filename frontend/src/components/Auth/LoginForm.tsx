@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
+import type { UserCredential } from 'firebase/auth';
+import type { FirebaseError } from 'firebase/app';
 import { auth } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useToast } from '@/hooks/useToast';
 
 interface LoginFormProps {
   onSuccess?: () => void;
@@ -27,6 +30,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
+  const { toast } = useToast();
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
@@ -56,12 +60,24 @@ export const LoginForm: React.FC<LoginFormProps> = ({
     setErrors({});
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential: UserCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      
+      // Log user info to console
+      console.log('Login successful:', {
+        email: user.email,
+        uid: user.uid,
+        displayName: user.displayName,
+        emailVerified: user.emailVerified
+      });
+      
+      toast.success('Successfully signed in!');
       onSuccess?.();
-    } catch (error: any) {
+    } catch (error) {
+      const firebaseError = error as FirebaseError;
       let errorMessage = 'Failed to sign in';
       
-      switch (error.code) {
+      switch (firebaseError.code) {
         case 'auth/user-not-found':
           errorMessage = 'No account found with this email address';
           break;
@@ -71,17 +87,24 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         case 'auth/invalid-email':
           errorMessage = 'Invalid email address';
           break;
+        case 'auth/invalid-credential':
+          errorMessage = 'Invalid email or password';
+          break;
         case 'auth/user-disabled':
           errorMessage = 'This account has been disabled';
           break;
         case 'auth/too-many-requests':
           errorMessage = 'Too many failed attempts. Please try again later';
           break;
+        case 'auth/network-request-failed':
+          errorMessage = 'Network error. Please check your connection';
+          break;
         default:
-          errorMessage = error.message || 'Failed to sign in';
+          errorMessage = firebaseError.message || 'Failed to sign in';
       }
       
       setErrors({ general: errorMessage });
+      toast.error(errorMessage);
       onError?.(errorMessage);
     } finally {
       setIsLoading(false);
@@ -141,7 +164,14 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             className="w-full"
             disabled={isLoading}
           >
-            {isLoading ? 'Signing in...' : 'Sign in'}
+            {isLoading ? (
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Signing in...
+              </div>
+            ) : (
+              'Sign in'
+            )}
           </Button>
         </form>
 
