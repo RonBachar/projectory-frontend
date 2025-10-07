@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Link } from "react-router-dom"
 
 export default function Home() {
   return (
@@ -17,9 +18,14 @@ export default function Home() {
           <Button className="w-full" size="lg">
             Go to Dashboard
           </Button>
-          <Button variant="outline" className="w-full" size="lg">
-            Log In
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" className="flex-1" size="lg" asChild>
+              <Link to="/login">Log In</Link>
+            </Button>
+            <Button variant="outline" className="flex-1" size="lg" asChild>
+              <Link to="/signup">Sign Up</Link>
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>
